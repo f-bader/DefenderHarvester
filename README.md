@@ -40,7 +40,7 @@ export SplunkToken=<hec token>
 ```
 
 ```
-Usage of C:\Users\fabia\git\DefenderHarvester\defenderharvester.exe:
+Usage ./defenderharvester.exe:
   -accesstoken string
         bring your own access token
   -alertservicesettings

@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -185,9 +186,25 @@ func main() {
 	}
 }
 
+type policyFunc func(*policy.Request) (*http.Response, error)
+
+func (pf policyFunc) Do(req *policy.Request) (*http.Response, error) {
+	return pf(req)
+}
+
 func getToken() (string, error) {
 	resource := "https://securitycenter.microsoft.com/mtp"
-	tokenCredential, err := azidentity.NewDefaultAzureCredential(nil)
+	tokenCredential, err := azidentity.NewDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{
+		ClientOptions: policy.ClientOptions{
+			PerCallPolicies: []policy.Policy{policyFunc(func(req *policy.Request) (*http.Response, error) {
+				// Use user defined user agent. Thanks to @chlowell
+				// https://github.com/Azure/azure-sdk-for-go/issues/22155#issuecomment-1874594822
+				ua := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0 OS/10.0.22621"
+				req.Raw().Header.Set("User-Agent", strings.ReplaceAll(ua, "_", " "))
+				return req.Next()
+			})},
+		},
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create credential: %w", err)
 	}
